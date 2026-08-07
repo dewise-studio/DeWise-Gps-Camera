@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <title>DeWise GPS Camera</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    header {
+      text-align: center;
+      padding: 4px 0;
+    }
+
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      color: #38bdf8;
+      text-transform: uppercase;
+    }
+
+    /* Permission / Warning Banner */
+    .location-banner {
+      display: none;
+      background-color: #7f1d1d;
+      border: 1px solid #ef4444;
+      color: #fecaca;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    }
+
+    .location-banner.active {
+      display: block;
+    }
+
+    .location-banner button {
+      margin-top: 6px;
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .viewport {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 3 / 4;
+      background-color: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .overlay-badge {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      color: #e2e8f0;
+      pointer-events: none;
+    }
+
+    .overlay-badge .brand-tag {
+      font-weight: 800;
+      font-size: 0.7rem;
+      color: #38bdf8;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .overlay-badge .coords {
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .overlay-badge .heading-alt {
+      color: #f59e0b;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .overlay-badge .address {
+      margin-top: 3px;
+      color: #cbd5e1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .overlay-badge .timestamp {
+      margin-top: 4px;
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background-color: #1e293b;
+      padding: 12px;
+      border-radius: 16px;
+    }
+
+    .btn {
+      background: #334155;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-capture {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 4px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+      transition: transform 0.1s;
+    }
+
+    .btn-capture:active {
+      transform: scale(0.92);
+    }
+
+    .save-toast {
+      position: fixed;
+      top: 20px;
+      background: #10b981;
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    .save-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .preview-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .preview-modal.active {
+      display: flex;
+    }
+
+    .preview-modal img {
+      max-width: 100%;
+      max-height: 75vh;
+      border-radius: 12px;
+      border: 1px solid #334155;
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    canvas {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <header>
+      <h1>DeWise GPS Camera</h1>
+    </header>
+
+    <!-- Location Permission / Status Warning Banner -->
+    <div class="location-banner" id="locationBanner">
+      <span id="locationBannerText">📍 Please enable location permissions in your browser settings to display GPS data.</span>
+      <div>
+        <button id="grantGpsBtn">Grant / Retry GPS</button>
+      </div>
+    </div>
+
+    <div class="viewport">
+      <video id="webcam" autoplay playsinline></video>
+      <div class="overlay-badge">
+        <div class="brand-tag">DeWise GPS Camera</div>
+        <div class="coords" id="coordsDisplay">Acquiring GPS Signal...</div>
+        <div class="heading-alt" id="headingAltDisplay">Heading: N/A | Alt: N/A</div>
+        <div class="address" id="addressDisplay">Locating address...</div>
+        <div class="timestamp" id="timeDisplay">--</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" id="flipBtn">Flip</button>
+      <button class="btn-capture" id="captureBtn" aria-label="Take Photo"></button>
+      <button class="btn" id="refreshGpsBtn">Sync GPS</button>
+    </div>
+  </div>
+
+  <!-- Notification Toast when Photo Saves -->
+  <div class="save-toast" id="saveToast">📸 Photo Saved to Device!</div>
+
+  <!-- Captured Photo Preview Modal -->
+  <div class="preview-modal" id="previewModal">
+    <img id="photoPreview" alt="DeWise Captured GPS Photo">
+    <div class="preview-actions">
+      <button class="btn" id="retakeBtn">Take Another</button>
+      <a class="btn" id="downloadBtn" download="DeWise-GPS-Photo.jpg" style="background:#38bdf8; color:#0f172a; text-decoration:none;">Download Again</a>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('DeWise ServiceWorker active.'))
+          .catch(err => console.error('SW registration error:', err));
+      });
+    }
+
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const coordsDisplay = document.getElementById('coordsDisplay');
+    const headingAltDisplay = document.getElementById('headingAltDisplay');
+    const addressDisplay = document.getElementById('addressDisplay');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const captureBtn = document.getElementById('captureBtn');
+    const flipBtn = document.getElementById('flipBtn');
+    const refreshGpsBtn = document.getElementById('refreshGpsBtn');
+    const previewModal = document.getElementById('previewModal');
+    const photoPreview = document.getElementById('photoPreview');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const retakeBtn = document.getElementById('retakeBtn');
+    const locationBanner = document.getElementById('locationBanner');
+    const locationBannerText = document.getElementById('locationBannerText');
+    const grantGpsBtn = document.getElementById('grantGpsBtn');
+    const saveToast = document.getElementById('saveToast');
+
+    let currentStream = null;
+    let facingMode = 'environment';
+    let watchGpsId = null;
+    
+    let currentGps = { 
+      lat: 'N/A', 
+      lon: 'N/A', 
+      alt: 'N/A', 
+      heading: 'N/A', 
+      address: 'Fetching location...', 
+      time: '' 
+    };
+
+    function getCardinalDirection(angle) {
+      const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+      const index = Math.round(angle / 45) % 8;
+      return directions[index];
+    }
+
+    function updateClock() {
+      const now = new Date();
+      currentGps.time = now.toLocaleString();
+      timeDisplay.textContent = currentGps.time;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    async function initCamera() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false
+        });
+        video.srcObject = currentStream;
+      } catch (err) {
+        showLocationBanner('Camera Permission Required: ' + err.message);
+      }
+    }
+
+    function showLocationBanner(msg) {
+      locationBannerText.textContent = msg;
+      locationBanner.classList.add('active');
+    }
+
+    function hideLocationBanner() {
+      locationBanner.classList.remove('active');
+    }
+
+    // High-Accuracy Continuous GPS Tracker
+    function startGpsTracking() {
+      if (!('geolocation' in navigator)) {
+        showLocationBanner('Geolocation is not supported by your browser.');
+        return;
+      }
+
+      // Check HTTPS constraint
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        showLocationBanner('⚠️ GPS requires HTTPS or Localhost connection to function.');
+      }
+
+      if (watchGpsId !== null) {
+        navigator.geolocation.clearWatch(watchGpsId);
+      }
+
+      coordsDisplay.textContent = 'Acquiring satellite lock...';
+
+      watchGpsId = navigator.geolocation.watchPosition(
+        async (pos) => {
+          hideLocationBanner();
+          const lat = pos.coords.latitude.toFixed(6);
+          const lon = pos.coords.longitude.toFixed(6);
+          const alt = (pos.coords.altitude !== null && pos.coords.altitude !== undefined)
+            ? `${Math.round(pos.coords.altitude)}m` 
+            : 'N/A';
+
+          currentGps.lat = lat;
+          currentGps.lon = lon;
+          currentGps.alt = alt;
+
+          coordsDisplay.textContent = `LAT: ${lat}° | LON: ${lon}°`;
+          updateHeadingAltUI();
+
+          // Reverse Geocoding Address Lookup
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+            const data = await res.json();
+            const addr = data.display_name || 'Address unavailable';
+            currentGps.address = addr;
+            addressDisplay.textContent = addr;
+          } catch {
+            currentGps.address = 'Location Found (Address Offline)';
+            addressDisplay.textContent = currentGps.address;
+          }
+        },
+        (err) => {
+          let errorMsg = 'Unable to get location.';
+          if (err.code === 1) { // PERMISSION_DENIED
+            errorMsg = '📍 Location access was denied. Please allow/enable location permissions in your phone/browser settings.';
+          } else if (err.code === 2) { // POSITION_UNAVAILABLE
+            errorMsg = '📡 GPS signal unavailable. Please ensure Location/GPS is turned ON in your phone settings.';
+          } else if (err.code === 3) { // TIMEOUT
+            errorMsg = '⏳ GPS request timed out. Searching for satellites...';
+          }
+          coordsDisplay.textContent = 'GPS Disabled / Searching...';
+          showLocationBanner(errorMsg);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    function initCompass() {
+      const handleOrientation = (event) => {
+        let heading = null;
+        if (event.webkitCompassHeading !== undefined) {
+          heading = event.webkitCompassHeading;
+        } else if (event.alpha !== null) {
+          heading = 360 - event.alpha;
+        }
+
+        if (heading !== null) {
+          const degrees = Math.round(heading);
+          const cardinal = getCardinalDirection(degrees);
+          currentGps.heading = `${degrees}° ${cardinal}`;
+          updateHeadingAltUI();
+        }
+      };
+
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+          .then(response => {
+            if (response === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation, true);
+            }
+          })
+          .catch(console.error);
+      } else {
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true) ||
+        window.addEventListener('deviceorientation', handleOrientation, true);
+      }
+    }
+
+    function updateHeadingAltUI() {
+      headingAltDisplay.textContent = `Heading: ${currentGps.heading} | Alt: ${currentGps.alt}`;
+    }
+
+    function triggerAutoSave(dataUrl, fileName) {
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Show temporary toast on screen
+      saveToast.classList.add('show');
+      setTimeout(() => {
+        saveToast.classList.remove('show');
+      }, 3000);
+    }
+
+    function capturePhoto() {
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth || 720;
+      canvas.height = video.videoHeight || 1280;
+
+      // 1. Draw live camera video frame
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // 2. Draw DeWise Watermark Box
+      const boxHeight = canvas.height * 0.22;
+      const margin = 20;
+      const boxY = canvas.height - boxHeight - margin;
+      
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.roundRect(margin, boxY, canvas.width - (margin * 2), boxHeight, 16);
+      ctx.fill();
+
+      // 3. Brand Title
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = `bold ${Math.floor(canvas.width * 0.030)}px sans-serif`;
+      ctx.fillText('DeWise GPS Camera', margin + 20, boxY + (boxHeight * 0.20));
+
+      // 4. Coordinates & Altitude
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${Math.floor(canvas.width * 0.032)}px sans-serif`;
+      ctx.fillText(`GPS: ${currentGps.lat}°, ${currentGps.lon}°  |  ALT: ${currentGps.alt}`, margin + 20, boxY + (boxHeight * 0.40));
+
+      // 5. Compass Heading
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = `bold ${Math.floor(canvas.width * 0.028)}px sans-serif`;
+      ctx.fillText(`HEADING: ${currentGps.heading}`, margin + 20, boxY + (boxHeight * 0.58));
+
+      // 6. Address
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = `${Math.floor(canvas.width * 0.024)}px sans-serif`;
+      let printAddr = currentGps.address;
+      if (printAddr.length > 55) printAddr = printAddr.substring(0, 52) + '...';
+      ctx.fillText(printAddr, margin + 20, boxY + (boxHeight * 0.76));
+
+      // 7. Date & Time Stamp
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = `${Math.floor(canvas.width * 0.020)}px sans-serif`;
+      ctx.fillText(`DATE/TIME: ${currentGps.time}`, margin + 20, boxY + (boxHeight * 0.90));
+
+      // Generate final image Data URL
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const filename = `DeWise-GPS-${Date.now()}.jpg`;
+
+      // Update Modal
+      photoPreview.src = dataUrl;
+      downloadBtn.href = dataUrl;
+      downloadBtn.download = filename;
+      previewModal.classList.add('active');
+
+      // AUTOMATICALLY SAVE PHOTO TO DEVICE
+      triggerAutoSave(dataUrl, filename);
+    }
+
+    // Event Listeners
+    captureBtn.addEventListener('click', capturePhoto);
+
+    flipBtn.addEventListener('click', () => {
+      facingMode = (facingMode === 'user') ? 'environment' : 'user';
+      initCamera();
+    });
+
+    refreshGpsBtn.addEventListener('click', () => {
+      startGpsTracking();
+      initCompass();
+    });
+
+    grantGpsBtn.addEventListener('click', () => {
+      startGpsTracking();
+      initCompass();
+    });
+
+    retakeBtn.addEventListener('click', () => {
+      previewModal.classList.remove('active');
+    });
+
+    // Initialize Application
+    initCamera();
+    startGpsTracking();
+    initCompass();
+  </script>
+</body>
+</html>
