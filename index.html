@@ -2,10 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.json">
   <title>DeWise GPS Camera</title>
   <style>
@@ -20,11 +18,13 @@
       background-color: #0f172a;
       color: #f8fafc;
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 12px;
+      overflow: hidden;
     }
 
     .app-container {
@@ -37,7 +37,7 @@
 
     header {
       text-align: center;
-      padding: 4px 0;
+      padding: 2px 0;
     }
 
     header h1 {
@@ -48,13 +48,12 @@
       text-transform: uppercase;
     }
 
-    /* Permission / Warning Banner */
     .location-banner {
       display: none;
       background-color: #7f1d1d;
       border: 1px solid #ef4444;
       color: #fecaca;
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-radius: 12px;
       font-size: 0.8rem;
       line-height: 1.4;
@@ -67,11 +66,11 @@
     }
 
     .location-banner button {
-      margin-top: 6px;
+      margin-top: 4px;
       background: #ef4444;
       color: #fff;
       border: none;
-      padding: 6px 14px;
+      padding: 4px 12px;
       border-radius: 20px;
       font-size: 0.75rem;
       font-weight: 700;
@@ -86,12 +85,67 @@
       border-radius: 16px;
       overflow: hidden;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      touch-action: none;
     }
 
     video {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transform-origin: center center;
+      transition: transform 0.05s ease-out;
+    }
+
+    .zoom-container {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .zoom-presets {
+      display: flex;
+      gap: 4px;
+    }
+
+    .zoom-preset-btn {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 0.68rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .zoom-preset-btn.active {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+
+    .zoom-slider {
+      width: 75px;
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+
+    .zoom-text {
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: #38bdf8;
+      min-width: 28px;
+      text-align: right;
     }
 
     .overlay-badge {
@@ -107,7 +161,7 @@
       font-size: 0.75rem;
       line-height: 1.4;
       color: #e2e8f0;
-      pointer-events: none;
+      z-index: 5;
     }
 
     .overlay-badge .brand-tag {
@@ -117,6 +171,25 @@
       letter-spacing: 1px;
       margin-bottom: 4px;
       text-transform: uppercase;
+    }
+
+    .overlay-badge .editable-field {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+
+    .overlay-badge .editable-field:hover {
+      background: rgba(56, 189, 248, 0.2);
+    }
+
+    .edit-icon {
+      font-size: 0.65rem;
+      opacity: 0.7;
     }
 
     .overlay-badge .coords {
@@ -206,14 +279,15 @@
       transform: translateY(0);
     }
 
-    .preview-modal {
+    .edit-modal {
       display: none;
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.92);
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(4px);
       z-index: 100;
       flex-direction: column;
       align-items: center;
@@ -222,20 +296,55 @@
       gap: 16px;
     }
 
-    .preview-modal.active {
+    .edit-modal.active {
       display: flex;
     }
 
-    .preview-modal img {
-      max-width: 100%;
-      max-height: 75vh;
-      border-radius: 12px;
+    .edit-card {
+      background: #1e293b;
       border: 1px solid #334155;
+      padding: 20px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
 
-    .preview-actions {
+    .edit-card h3 {
+      font-size: 1.1rem;
+      color: #38bdf8;
+      text-align: center;
+    }
+
+    .input-group {
       display: flex;
-      gap: 12px;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-group label {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    .input-group input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 6px;
     }
 
     canvas {
@@ -250,22 +359,43 @@
       <h1>DeWise GPS Camera</h1>
     </header>
 
-    <!-- Location Permission / Status Warning Banner -->
     <div class="location-banner" id="locationBanner">
-      <span id="locationBannerText">📍 Please enable location permissions in your browser settings to display GPS data.</span>
+      <span id="locationBannerText">📍 Please enable location permissions in browser settings.</span>
       <div>
         <button id="grantGpsBtn">Grant / Retry GPS</button>
       </div>
     </div>
 
-    <div class="viewport">
-      <video id="webcam" autoplay playsinline></video>
+    <div class="viewport" id="viewport">
+      <video id="webcam" autoplay playsinline muted></video>
+
+      <div class="zoom-container">
+        <div class="zoom-presets">
+          <button class="zoom-preset-btn active" data-zoom="1">1x</button>
+          <button class="zoom-preset-btn" data-zoom="2">2x</button>
+          <button class="zoom-preset-btn" data-zoom="3">3x</button>
+          <button class="zoom-preset-btn" data-zoom="5">5x</button>
+        </div>
+        <input type="range" id="zoomRange" class="zoom-slider" min="1" max="5" step="0.1" value="1">
+        <span class="zoom-text" id="zoomText">1.0x</span>
+      </div>
+
       <div class="overlay-badge">
         <div class="brand-tag">DeWise GPS Camera</div>
-        <div class="coords" id="coordsDisplay">Acquiring GPS Signal...</div>
+        <div class="coords">
+          <span class="editable-field" id="editCoordsBtn">
+            <span id="coordsDisplay">Acquiring GPS Signal...</span>
+            <span class="edit-icon">✏️</span>
+          </span>
+        </div>
         <div class="heading-alt" id="headingAltDisplay">Heading: N/A | Alt: N/A</div>
         <div class="address" id="addressDisplay">Locating address...</div>
-        <div class="timestamp" id="timeDisplay">--</div>
+        <div class="timestamp">
+          <span class="editable-field" id="editTimeBtn">
+            <span id="timeDisplay">--</span>
+            <span class="edit-icon">✏️</span>
+          </span>
+        </div>
       </div>
     </div>
 
@@ -276,31 +406,53 @@
     </div>
   </div>
 
-  <!-- Notification Toast when Photo Saves -->
-  <div class="save-toast" id="saveToast">📸 Photo Saved to Device!</div>
+  <div class="save-toast" id="saveToast">📸 Photo Saved to Phone Gallery!</div>
 
-  <!-- Captured Photo Preview Modal -->
-  <div class="preview-modal" id="previewModal">
-    <img id="photoPreview" alt="DeWise Captured GPS Photo">
-    <div class="preview-actions">
-      <button class="btn" id="retakeBtn">Take Another</button>
-      <a class="btn" id="downloadBtn" download="DeWise-GPS-Photo.jpg" style="background:#38bdf8; color:#0f172a; text-decoration:none;">Download Again</a>
+  <!-- Edit Coordinates Modal -->
+  <div class="edit-modal" id="coordsModal">
+    <div class="edit-card">
+      <h3>Edit Coordinates</h3>
+      <div class="input-group">
+        <label for="latInput">Latitude (°):</label>
+        <input type="text" id="latInput" placeholder="e.g. 6.524379">
+      </div>
+      <div class="input-group">
+        <label for="lonInput">Longitude (°):</label>
+        <input type="text" id="lonInput" placeholder="e.g. 3.379206">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn" id="cancelCoordsBtn">Cancel</button>
+        <button class="btn" id="saveCoordsBtn" style="background:#38bdf8; color:#0f172a;">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Date & Time Modal -->
+  <div class="edit-modal" id="timeModal">
+    <div class="edit-card">
+      <h3>Edit Date & Time</h3>
+      <div class="input-group">
+        <label for="customTimeInput">Custom Date/Time String:</label>
+        <input type="text" id="customTimeInput" placeholder="e.g. 10/03/2026, 14:30:00">
+      </div>
+      <div class="modal-buttons">
+        <button class="btn" id="resetTimeBtn">Auto Time</button>
+        <button class="btn" id="saveTimeBtn" style="background:#38bdf8; color:#0f172a;">Apply</button>
+      </div>
     </div>
   </div>
 
   <canvas id="canvas"></canvas>
 
   <script>
-    // Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(() => console.log('DeWise ServiceWorker active.'))
-          .catch(err => console.error('SW registration error:', err));
+        navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW error:', err));
       });
     }
 
     const video = document.getElementById('webcam');
+    const viewport = document.getElementById('viewport');
     const canvas = document.getElementById('canvas');
     const coordsDisplay = document.getElementById('coordsDisplay');
     const headingAltDisplay = document.getElementById('headingAltDisplay');
@@ -309,19 +461,43 @@
     const captureBtn = document.getElementById('captureBtn');
     const flipBtn = document.getElementById('flipBtn');
     const refreshGpsBtn = document.getElementById('refreshGpsBtn');
-    const previewModal = document.getElementById('previewModal');
-    const photoPreview = document.getElementById('photoPreview');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const retakeBtn = document.getElementById('retakeBtn');
     const locationBanner = document.getElementById('locationBanner');
     const locationBannerText = document.getElementById('locationBannerText');
     const grantGpsBtn = document.getElementById('grantGpsBtn');
     const saveToast = document.getElementById('saveToast');
 
+    const zoomRange = document.getElementById('zoomRange');
+    const zoomText = document.getElementById('zoomText');
+    const zoomPresetBtns = document.querySelectorAll('.zoom-preset-btn');
+
+    const editCoordsBtn = document.getElementById('editCoordsBtn');
+    const coordsModal = document.getElementById('coordsModal');
+    const latInput = document.getElementById('latInput');
+    const lonInput = document.getElementById('lonInput');
+    const saveCoordsBtn = document.getElementById('saveCoordsBtn');
+    const cancelCoordsBtn = document.getElementById('cancelCoordsBtn');
+
+    const editTimeBtn = document.getElementById('editTimeBtn');
+    const timeModal = document.getElementById('timeModal');
+    const customTimeInput = document.getElementById('customTimeInput');
+    const saveTimeBtn = document.getElementById('saveTimeBtn');
+    const resetTimeBtn = document.getElementById('resetTimeBtn');
+
     let currentStream = null;
     let facingMode = 'environment';
+    let videoDevices = [];
+    let currentDeviceIndex = 0;
     let watchGpsId = null;
+
+    let isManualGps = false;
+    let isManualTime = false;
     
+    let zoomFactor = 1.0;
+    let supportsHardwareZoom = false;
+
+    // Direct Gallery Folder Handle
+    let galleryFolderHandle = null;
+
     let currentGps = { 
       lat: 'N/A', 
       lon: 'N/A', 
@@ -333,32 +509,149 @@
 
     function getCardinalDirection(angle) {
       const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-      const index = Math.round(angle / 45) % 8;
-      return directions[index];
+      return directions[Math.round(angle / 45) % 8];
     }
 
     function updateClock() {
-      const now = new Date();
-      currentGps.time = now.toLocaleString();
-      timeDisplay.textContent = currentGps.time;
+      if (!isManualTime) {
+        currentGps.time = new Date().toLocaleString();
+        timeDisplay.textContent = currentGps.time;
+      }
     }
     setInterval(updateClock, 1000);
     updateClock();
 
+    async function getCameraDevices() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        videoDevices = devices.filter(d => d.kind === 'videoinput');
+      } catch (e) {
+        console.warn('Device enumeration error:', e);
+      }
+    }
+
     async function initCamera() {
       if (currentStream) {
         currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
       }
+
+      await getCameraDevices();
+
+      let videoConstraint = { facingMode: { exact: facingMode } };
+      if (videoDevices.length > 0 && videoDevices[currentDeviceIndex]) {
+        videoConstraint = { deviceId: { exact: videoDevices[currentDeviceIndex].deviceId } };
+      } else {
+        videoConstraint = { facingMode: facingMode };
+      }
+
       try {
         currentStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          video: { ...videoConstraint, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false
         });
         video.srcObject = currentStream;
+        await video.play();
+        configureHardwareZoom();
       } catch (err) {
-        showLocationBanner('Camera Permission Required: ' + err.message);
+        try {
+          currentStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+          });
+          video.srcObject = currentStream;
+          await video.play();
+          configureHardwareZoom();
+        } catch (videoErr) {
+          showLocationBanner('Camera Permission Required: ' + videoErr.message);
+        }
       }
     }
+
+    async function flipCamera() {
+      facingMode = (facingMode === 'environment') ? 'user' : 'environment';
+      if (videoDevices.length > 1) {
+        currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
+      }
+      await initCamera();
+    }
+
+    function configureHardwareZoom() {
+      if (!currentStream) return;
+      const [track] = currentStream.getVideoTracks();
+      if (!track || !track.getCapabilities) return;
+
+      const capabilities = track.getCapabilities();
+      if ('zoom' in capabilities) {
+        supportsHardwareZoom = true;
+        zoomRange.min = capabilities.zoom.min || 1;
+        zoomRange.max = Math.min(capabilities.zoom.max || 5, 5);
+        zoomRange.step = capabilities.zoom.step || 0.1;
+      } else {
+        supportsHardwareZoom = false;
+        zoomRange.min = 1;
+        zoomRange.max = 5;
+        zoomRange.step = 0.1;
+      }
+      applyZoom(zoomFactor);
+    }
+
+    function applyZoom(val) {
+      zoomFactor = Math.max(1, Math.min(val, 5));
+      zoomRange.value = zoomFactor;
+      zoomText.textContent = `${zoomFactor.toFixed(1)}x`;
+
+      zoomPresetBtns.forEach(btn => {
+        const pVal = parseFloat(btn.dataset.zoom);
+        btn.classList.toggle('active', Math.abs(pVal - zoomFactor) < 0.2);
+      });
+
+      if (supportsHardwareZoom && currentStream) {
+        const [track] = currentStream.getVideoTracks();
+        if (track) {
+          track.applyConstraints({ advanced: [{ zoom: zoomFactor }] }).catch(() => {
+            supportsHardwareZoom = false;
+            applyCSSZoom();
+          });
+        }
+      } else {
+        applyCSSZoom();
+      }
+    }
+
+    function applyCSSZoom() {
+      video.style.transform = supportsHardwareZoom ? 'scale(1)' : `scale(${zoomFactor})`;
+    }
+
+    let initialPinchDist = 0;
+    let initialZoomFactor = 1;
+
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        initialPinchDist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+        initialZoomFactor = zoomFactor;
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialPinchDist > 0) {
+        const currentDist = Math.hypot(
+          e.touches[0].pageX - e.touches[1].pageX,
+          e.touches[0].pageY - e.touches[1].pageY
+        );
+        applyZoom(initialZoomFactor * (currentDist / initialPinchDist));
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', () => { initialPinchDist = 0; }, { passive: true });
+
+    zoomRange.addEventListener('input', (e) => applyZoom(parseFloat(e.target.value)));
+    zoomPresetBtns.forEach(btn => {
+      btn.addEventListener('click', () => applyZoom(parseFloat(btn.dataset.zoom)));
+    });
 
     function showLocationBanner(msg) {
       locationBannerText.textContent = msg;
@@ -369,97 +662,68 @@
       locationBanner.classList.remove('active');
     }
 
-    // High-Accuracy Continuous GPS Tracker
+    function fetchReverseGeocode(lat, lon) {
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
+        .then(res => res.json())
+        .then(data => {
+          const addr = data.display_name || 'Address unavailable';
+          currentGps.address = addr;
+          addressDisplay.textContent = addr;
+        })
+        .catch(() => {
+          currentGps.address = 'Location Found (Address Offline)';
+          addressDisplay.textContent = currentGps.address;
+        });
+    }
+
     function startGpsTracking() {
       if (!('geolocation' in navigator)) {
         showLocationBanner('Geolocation is not supported by your browser.');
         return;
       }
 
-      // Check HTTPS constraint
-      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        showLocationBanner('⚠️ GPS requires HTTPS or Localhost connection to function.');
-      }
-
-      if (watchGpsId !== null) {
-        navigator.geolocation.clearWatch(watchGpsId);
-      }
-
-      coordsDisplay.textContent = 'Acquiring satellite lock...';
+      if (watchGpsId !== null) navigator.geolocation.clearWatch(watchGpsId);
+      if (!isManualGps) coordsDisplay.textContent = 'Acquiring satellite lock...';
 
       watchGpsId = navigator.geolocation.watchPosition(
-        async (pos) => {
+        (pos) => {
           hideLocationBanner();
-          const lat = pos.coords.latitude.toFixed(6);
-          const lon = pos.coords.longitude.toFixed(6);
-          const alt = (pos.coords.altitude !== null && pos.coords.altitude !== undefined)
-            ? `${Math.round(pos.coords.altitude)}m` 
-            : 'N/A';
+          currentGps.alt = pos.coords.altitude ? `${Math.round(pos.coords.altitude)}m` : 'N/A';
 
-          currentGps.lat = lat;
-          currentGps.lon = lon;
-          currentGps.alt = alt;
-
-          coordsDisplay.textContent = `LAT: ${lat}° | LON: ${lon}°`;
+          if (!isManualGps) {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lon = pos.coords.longitude.toFixed(6);
+            currentGps.lat = lat;
+            currentGps.lon = lon;
+            coordsDisplay.textContent = `LAT: ${lat}° | LON: ${lon}°`;
+            fetchReverseGeocode(lat, lon);
+          }
           updateHeadingAltUI();
-
-          // Reverse Geocoding Address Lookup
-          try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
-            const data = await res.json();
-            const addr = data.display_name || 'Address unavailable';
-            currentGps.address = addr;
-            addressDisplay.textContent = addr;
-          } catch {
-            currentGps.address = 'Location Found (Address Offline)';
-            addressDisplay.textContent = currentGps.address;
+        },
+        () => {
+          if (!isManualGps) {
+            coordsDisplay.textContent = 'GPS Disabled / Searching...';
+            showLocationBanner('📍 Location permission or signal required.');
           }
         },
-        (err) => {
-          let errorMsg = 'Unable to get location.';
-          if (err.code === 1) { // PERMISSION_DENIED
-            errorMsg = '📍 Location access was denied. Please allow/enable location permissions in your phone/browser settings.';
-          } else if (err.code === 2) { // POSITION_UNAVAILABLE
-            errorMsg = '📡 GPS signal unavailable. Please ensure Location/GPS is turned ON in your phone settings.';
-          } else if (err.code === 3) { // TIMEOUT
-            errorMsg = '⏳ GPS request timed out. Searching for satellites...';
-          }
-          coordsDisplay.textContent = 'GPS Disabled / Searching...';
-          showLocationBanner(errorMsg);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     }
 
     function initCompass() {
       const handleOrientation = (event) => {
-        let heading = null;
-        if (event.webkitCompassHeading !== undefined) {
-          heading = event.webkitCompassHeading;
-        } else if (event.alpha !== null) {
-          heading = 360 - event.alpha;
-        }
-
+        let heading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : (event.alpha !== null ? 360 - event.alpha : null);
         if (heading !== null) {
           const degrees = Math.round(heading);
-          const cardinal = getCardinalDirection(degrees);
-          currentGps.heading = `${degrees}° ${cardinal}`;
+          currentGps.heading = `${degrees}° ${getCardinalDirection(degrees)}`;
           updateHeadingAltUI();
         }
       };
 
       if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-          .then(response => {
-            if (response === 'granted') {
-              window.addEventListener('deviceorientation', handleOrientation, true);
-            }
-          })
-          .catch(console.error);
+        DeviceOrientationEvent.requestPermission().then(res => {
+          if (res === 'granted') window.addEventListener('deviceorientation', handleOrientation, true);
+        }).catch(console.error);
       } else {
         window.addEventListener('deviceorientationabsolute', handleOrientation, true) ||
         window.addEventListener('deviceorientation', handleOrientation, true);
@@ -470,30 +734,102 @@
       headingAltDisplay.textContent = `Heading: ${currentGps.heading} | Alt: ${currentGps.alt}`;
     }
 
-    function triggerAutoSave(dataUrl, fileName) {
+    editCoordsBtn.addEventListener('click', () => {
+      latInput.value = currentGps.lat !== 'N/A' ? currentGps.lat : '';
+      lonInput.value = currentGps.lon !== 'N/A' ? currentGps.lon : '';
+      coordsModal.classList.add('active');
+    });
+
+    cancelCoordsBtn.addEventListener('click', () => coordsModal.classList.remove('active'));
+
+    saveCoordsBtn.addEventListener('click', () => {
+      const newLat = latInput.value.trim();
+      const newLon = lonInput.value.trim();
+      if (newLat && newLon) {
+        isManualGps = true;
+        currentGps.lat = newLat;
+        currentGps.lon = newLon;
+        coordsDisplay.textContent = `LAT: ${newLat}° | LON: ${newLon}°`;
+        coordsModal.classList.remove('active');
+        fetchReverseGeocode(newLat, newLon);
+      }
+    });
+
+    editTimeBtn.addEventListener('click', () => {
+      customTimeInput.value = currentGps.time;
+      timeModal.classList.add('active');
+    });
+
+    saveTimeBtn.addEventListener('click', () => {
+      const customTime = customTimeInput.value.trim();
+      if (customTime) {
+        isManualTime = true;
+        currentGps.time = customTime;
+        timeDisplay.textContent = customTime;
+      }
+      timeModal.classList.remove('active');
+    });
+
+    resetTimeBtn.addEventListener('click', () => {
+      isManualTime = false;
+      updateClock();
+      timeModal.classList.remove('active');
+    });
+
+    // Auto-Save Directly into Phone Gallery / Chosen Storage
+    async function saveDirectToGallery(blob, fileName) {
+      if ('showDirectoryPicker' in window) {
+        try {
+          if (!galleryFolderHandle) {
+            alert('Select your Pictures/DCIM folder ONCE so photos auto-save directly to gallery!');
+            galleryFolderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+          }
+          const fileHandle = await galleryFolderHandle.getFileHandle(fileName, { create: true });
+          const writable = await fileHandle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+
+          showToast('📸 Saved directly to Gallery!');
+          return;
+        } catch (e) {
+          console.warn('Directory Picker cancelled/failed:', e);
+        }
+      }
+
+      // Background Download Fallback (No Preview Modal)
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = dataUrl;
+      link.href = url;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      showToast('📸 Photo Saved!');
+    }
 
-      // Show temporary toast on screen
+    function showToast(msg) {
+      saveToast.textContent = msg;
       saveToast.classList.add('show');
-      setTimeout(() => {
-        saveToast.classList.remove('show');
-      }, 3000);
+      setTimeout(() => saveToast.classList.remove('show'), 3000);
     }
 
     function capturePhoto() {
       const ctx = canvas.getContext('2d');
-      canvas.width = video.videoWidth || 720;
-      canvas.height = video.videoHeight || 1280;
+      const vWidth = video.videoWidth || 720;
+      const vHeight = video.videoHeight || 1280;
 
-      // 1. Draw live camera video frame
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.width = vWidth;
+      canvas.height = vHeight;
 
-      // 2. Draw DeWise Watermark Box
+      if (!supportsHardwareZoom && zoomFactor > 1.0) {
+        const cropW = vWidth / zoomFactor;
+        const cropH = vHeight / zoomFactor;
+        ctx.drawImage(video, (vWidth - cropW) / 2, (vHeight - cropH) / 2, cropW, cropH, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      }
+
       const boxHeight = canvas.height * 0.22;
       const margin = 20;
       const boxY = canvas.height - boxHeight - margin;
@@ -502,56 +838,40 @@
       ctx.roundRect(margin, boxY, canvas.width - (margin * 2), boxHeight, 16);
       ctx.fill();
 
-      // 3. Brand Title
       ctx.fillStyle = '#38bdf8';
       ctx.font = `bold ${Math.floor(canvas.width * 0.030)}px sans-serif`;
       ctx.fillText('DeWise GPS Camera', margin + 20, boxY + (boxHeight * 0.20));
 
-      // 4. Coordinates & Altitude
       ctx.fillStyle = '#ffffff';
       ctx.font = `bold ${Math.floor(canvas.width * 0.032)}px sans-serif`;
       ctx.fillText(`GPS: ${currentGps.lat}°, ${currentGps.lon}°  |  ALT: ${currentGps.alt}`, margin + 20, boxY + (boxHeight * 0.40));
 
-      // 5. Compass Heading
       ctx.fillStyle = '#f59e0b';
       ctx.font = `bold ${Math.floor(canvas.width * 0.028)}px sans-serif`;
       ctx.fillText(`HEADING: ${currentGps.heading}`, margin + 20, boxY + (boxHeight * 0.58));
 
-      // 6. Address
       ctx.fillStyle = '#cbd5e1';
       ctx.font = `${Math.floor(canvas.width * 0.024)}px sans-serif`;
       let printAddr = currentGps.address;
       if (printAddr.length > 55) printAddr = printAddr.substring(0, 52) + '...';
       ctx.fillText(printAddr, margin + 20, boxY + (boxHeight * 0.76));
 
-      // 7. Date & Time Stamp
       ctx.fillStyle = '#94a3b8';
       ctx.font = `${Math.floor(canvas.width * 0.020)}px sans-serif`;
       ctx.fillText(`DATE/TIME: ${currentGps.time}`, margin + 20, boxY + (boxHeight * 0.90));
 
-      // Generate final image Data URL
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-      const filename = `DeWise-GPS-${Date.now()}.jpg`;
-
-      // Update Modal
-      photoPreview.src = dataUrl;
-      downloadBtn.href = dataUrl;
-      downloadBtn.download = filename;
-      previewModal.classList.add('active');
-
-      // AUTOMATICALLY SAVE PHOTO TO DEVICE
-      triggerAutoSave(dataUrl, filename);
+      // Direct Silent Capture
+      canvas.toBlob((blob) => {
+        const filename = `DeWise-GPS-${Date.now()}.jpg`;
+        saveDirectToGallery(blob, filename);
+      }, 'image/jpeg', 0.95);
     }
 
-    // Event Listeners
     captureBtn.addEventListener('click', capturePhoto);
-
-    flipBtn.addEventListener('click', () => {
-      facingMode = (facingMode === 'user') ? 'environment' : 'user';
-      initCamera();
-    });
+    flipBtn.addEventListener('click', flipCamera);
 
     refreshGpsBtn.addEventListener('click', () => {
+      isManualGps = false;
       startGpsTracking();
       initCompass();
     });
@@ -561,11 +881,6 @@
       initCompass();
     });
 
-    retakeBtn.addEventListener('click', () => {
-      previewModal.classList.remove('active');
-    });
-
-    // Initialize Application
     initCamera();
     startGpsTracking();
     initCompass();
