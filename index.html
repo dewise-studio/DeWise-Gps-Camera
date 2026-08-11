@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DeWise GPS">
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="dewise-Gps.png">
   <title>DeWise GPS Camera</title>
   <style>
     * {
@@ -14,40 +18,143 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
       background-color: #0f172a;
       color: #f8fafc;
-      min-height: 100vh;
-      min-height: 100dvh;
+      overflow: hidden;
+    }
+
+    body {
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      padding: 12px;
+      align-items: center;
+      padding: clamp(8px, 2vh, 16px);
+    }
+
+    /* Top Floating PWA Install Banner */
+    .pwa-install-banner {
+      display: none;
+      width: 100%;
+      max-width: 480px;
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #ffffff;
+      padding: 10px 14px;
+      border-radius: 16px;
+      margin-bottom: 8px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.35);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+
+    .pwa-install-banner.show {
+      display: flex;
+    }
+
+    .pwa-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .pwa-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      background: #fff;
+      padding: 2px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .pwa-text {
+      min-width: 0;
+    }
+
+    .pwa-text h4 {
+      font-size: 0.88rem;
+      font-weight: 800;
+      white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
+      color: #ffffff;
+    }
+
+    .pwa-text p {
+      font-size: 0.72rem;
+      opacity: 0.95;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #e0f2fe;
+    }
+
+    .pwa-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-install {
+      background: #ffffff;
+      color: #0369a1;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 800;
+      font-size: 0.78rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .btn-install:active {
+      transform: scale(0.95);
+    }
+
+    .btn-close-banner {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 4px;
+      opacity: 0.8;
     }
 
     .app-container {
       width: 100%;
       max-width: 480px;
+      height: 100%;
+      max-height: 850px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     header {
       text-align: center;
-      padding: 2px 0;
+      flex-shrink: 0;
     }
 
     header h1 {
-      font-size: 1.35rem;
+      font-size: 1.3rem;
       font-weight: 800;
       letter-spacing: 0.8px;
       color: #38bdf8;
       text-transform: uppercase;
     }
 
+    /* Location Permission Warning Banner */
     .location-banner {
       display: none;
       background-color: #7f1d1d;
@@ -55,10 +162,11 @@
       color: #fecaca;
       padding: 8px 12px;
       border-radius: 12px;
-      font-size: 0.8rem;
-      line-height: 1.4;
+      font-size: 0.78rem;
+      line-height: 1.3;
       text-align: center;
       box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+      flex-shrink: 0;
     }
 
     .location-banner.active {
@@ -80,6 +188,8 @@
     .viewport {
       position: relative;
       width: 100%;
+      flex: 1;
+      min-height: 0;
       aspect-ratio: 3 / 4;
       background-color: #000;
       border-radius: 16px;
@@ -96,6 +206,7 @@
       transition: transform 0.05s ease-out;
     }
 
+    /* Zoom Overlay Bar */
     .zoom-container {
       position: absolute;
       top: 12px;
@@ -157,19 +268,37 @@
       backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 12px;
-      padding: 12px;
-      font-size: 0.75rem;
-      line-height: 1.4;
+      padding: 10px;
+      font-size: 0.72rem;
+      line-height: 1.35;
       color: #e2e8f0;
       z-index: 5;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .overlay-logo {
+      width: 46px;
+      height: 46px;
+      object-fit: contain;
+      border-radius: 8px;
+      background: transparent;
+      padding: 2px;
+      flex-shrink: 0;
+    }
+
+    .overlay-content {
+      flex: 1;
+      min-width: 0;
     }
 
     .overlay-badge .brand-tag {
       font-weight: 800;
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       color: #38bdf8;
-      letter-spacing: 1px;
-      margin-bottom: 4px;
+      letter-spacing: 0.8px;
+      margin-bottom: 1px;
       text-transform: uppercase;
     }
 
@@ -200,11 +329,11 @@
     .overlay-badge .heading-alt {
       color: #f59e0b;
       font-weight: 600;
-      margin-top: 2px;
+      margin-top: 1px;
     }
 
     .overlay-badge .address {
-      margin-top: 3px;
+      margin-top: 1px;
       color: #cbd5e1;
       white-space: nowrap;
       overflow: hidden;
@@ -212,8 +341,8 @@
     }
 
     .overlay-badge .timestamp {
-      margin-top: 4px;
-      font-size: 0.7rem;
+      margin-top: 1px;
+      font-size: 0.68rem;
       color: #94a3b8;
     }
 
@@ -222,8 +351,9 @@
       justify-content: space-around;
       align-items: center;
       background-color: #1e293b;
-      padding: 12px;
+      padding: 10px 14px;
       border-radius: 16px;
+      flex-shrink: 0;
     }
 
     .btn {
@@ -243,14 +373,15 @@
     }
 
     .btn-capture {
-      width: 64px;
-      height: 64px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       background: #38bdf8;
       border: 4px solid #fff;
       cursor: pointer;
       box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
       transition: transform 0.1s;
+      flex-shrink: 0;
     }
 
     .btn-capture:active {
@@ -279,7 +410,8 @@
       transform: translateY(0);
     }
 
-    .edit-modal {
+    /* Modal Styling for Preview & Editing */
+    .preview-modal, .edit-modal, .ios-modal {
       display: none;
       position: fixed;
       top: 0;
@@ -296,11 +428,11 @@
       gap: 16px;
     }
 
-    .edit-modal.active {
+    .preview-modal.active, .edit-modal.active, .ios-modal.active {
       display: flex;
     }
 
-    .edit-card {
+    .edit-card, .ios-card {
       background: #1e293b;
       border: 1px solid #334155;
       padding: 20px;
@@ -312,10 +444,26 @@
       gap: 14px;
     }
 
-    .edit-card h3 {
+    .edit-card h3, .ios-card h3 {
       font-size: 1.1rem;
       color: #38bdf8;
       text-align: center;
+    }
+
+    .ios-card p {
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: #cbd5e1;
+      text-align: center;
+    }
+
+    .ios-steps {
+      text-align: left;
+      font-size: 0.8rem;
+      background: #0f172a;
+      padding: 10px 14px;
+      border-radius: 12px;
+      line-height: 1.6;
     }
 
     .input-group {
@@ -347,6 +495,18 @@
       margin-top: 6px;
     }
 
+    .preview-modal img {
+      max-width: 100%;
+      max-height: 75vh;
+      border-radius: 12px;
+      border: 1px solid #334155;
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 12px;
+    }
+
     canvas {
       display: none;
     }
@@ -354,11 +514,27 @@
 </head>
 <body>
 
+  <!-- Top Floating PWA Install Banner -->
+  <div class="pwa-install-banner" id="pwaBanner">
+    <div class="pwa-info">
+      <img src="dewise-Gps.png" class="pwa-icon" alt="DeWise Logo" id="bannerLogo">
+      <div class="pwa-text">
+        <h4>DeWise GPS Camera</h4>
+        <p>Install app for fast offline access</p>
+      </div>
+    </div>
+    <div class="pwa-actions">
+      <button class="btn-install" id="installNowBtn">Install Now</button>
+      <button class="btn-close-banner" id="closeBannerBtn">&times;</button>
+    </div>
+  </div>
+
   <div class="app-container">
     <header>
       <h1>DeWise GPS Camera</h1>
     </header>
 
+    <!-- Location Permission / Status Warning Banner -->
     <div class="location-banner" id="locationBanner">
       <span id="locationBannerText">📍 Please enable location permissions in browser settings.</span>
       <div>
@@ -369,6 +545,7 @@
     <div class="viewport" id="viewport">
       <video id="webcam" autoplay playsinline muted></video>
 
+      <!-- Zoom Controls -->
       <div class="zoom-container">
         <div class="zoom-presets">
           <button class="zoom-preset-btn active" data-zoom="1">1x</button>
@@ -381,20 +558,23 @@
       </div>
 
       <div class="overlay-badge">
-        <div class="brand-tag">DeWise GPS Camera</div>
-        <div class="coords">
-          <span class="editable-field" id="editCoordsBtn">
-            <span id="coordsDisplay">Acquiring GPS Signal...</span>
-            <span class="edit-icon">✏️</span>
-          </span>
-        </div>
-        <div class="heading-alt" id="headingAltDisplay">Heading: N/A | Alt: N/A</div>
-        <div class="address" id="addressDisplay">Locating address...</div>
-        <div class="timestamp">
-          <span class="editable-field" id="editTimeBtn">
-            <span id="timeDisplay">--</span>
-            <span class="edit-icon">✏️</span>
-          </span>
+        <img id="logoImg" class="overlay-logo" src="dewise-Gps.png" alt="DeWise Logo" crossorigin="anonymous">
+        <div class="overlay-content">
+          <div class="brand-tag">DeWise GPS Camera</div>
+          <div class="coords">
+            <span class="editable-field" id="editCoordsBtn">
+              <span id="coordsDisplay">Acquiring GPS Signal...</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </div>
+          <div class="heading-alt" id="headingAltDisplay">Heading: N/A | Alt: N/A</div>
+          <div class="address" id="addressDisplay">Locating address...</div>
+          <div class="timestamp">
+            <span class="editable-field" id="editTimeBtn">
+              <span id="timeDisplay">--</span>
+              <span class="edit-icon">✏️</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -406,7 +586,22 @@
     </div>
   </div>
 
-  <div class="save-toast" id="saveToast">📸 Photo Saved to Phone Gallery!</div>
+  <!-- Notification Toast -->
+  <div class="save-toast" id="saveToast">📸 Photo Saved to Device!</div>
+
+  <!-- iOS Install Guidance Modal -->
+  <div class="ios-modal" id="iosModal">
+    <div class="ios-card">
+      <h3>Install DeWise GPS Camera</h3>
+      <p>To install on your iPhone / iPad:</p>
+      <div class="ios-steps">
+        1. Tap the <strong>Share button</strong> (box with arrow) in Safari.<br>
+        2. Scroll down and tap <strong>"Add to Home Screen"</strong>.<br>
+        3. Tap <strong>Add</strong> at the top right.
+      </div>
+      <button class="btn" id="closeIosModalBtn" style="background:#38bdf8; color:#0f172a; width:100%;">Got it</button>
+    </div>
+  </div>
 
   <!-- Edit Coordinates Modal -->
   <div class="edit-modal" id="coordsModal">
@@ -442,15 +637,83 @@
     </div>
   </div>
 
+  <!-- Captured Photo Preview Modal -->
+  <div class="preview-modal" id="previewModal">
+    <img id="photoPreview" alt="DeWise Captured GPS Photo">
+    <div class="preview-actions">
+      <button class="btn" id="retakeBtn">Take Another</button>
+      <a class="btn" id="downloadBtn" download="DeWise-GPS-Photo.jpg" style="background:#38bdf8; color:#0f172a; text-decoration:none;">Download Again</a>
+    </div>
+  </div>
+
   <canvas id="canvas"></canvas>
 
   <script>
+    // Service Worker Registration
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.error('SW error:', err));
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('DeWise ServiceWorker active.'))
+          .catch(err => console.error('SW registration error:', err));
       });
     }
 
+    // PWA Installation Engine
+    const pwaBanner = document.getElementById('pwaBanner');
+    const installNowBtn = document.getElementById('installNowBtn');
+    const closeBannerBtn = document.getElementById('closeBannerBtn');
+    const iosModal = document.getElementById('iosModal');
+    const closeIosModalBtn = document.getElementById('closeIosModalBtn');
+
+    let deferredPrompt = null;
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+      || window.navigator.standalone 
+      || document.referrer.includes('android-app://');
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (!isStandalone && !sessionStorage.getItem('pwaBannerDismissed')) {
+        pwaBanner.classList.add('show');
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      pwaBanner.classList.remove('show');
+      deferredPrompt = null;
+    });
+
+    if (!isStandalone && !sessionStorage.getItem('pwaBannerDismissed')) {
+      pwaBanner.classList.add('show');
+    }
+
+    installNowBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          pwaBanner.classList.remove('show');
+        }
+        deferredPrompt = null;
+      } else if (isIOS) {
+        iosModal.classList.add('active');
+      } else {
+        alert('To install DeWise GPS Camera:\n\n• Chrome/Android: Tap menu (⋮) → "Add to Home screen".\n• iPhone/Safari: Tap Share (↑) → "Add to Home Screen".');
+      }
+    });
+
+    closeBannerBtn.addEventListener('click', () => {
+      pwaBanner.classList.remove('show');
+      sessionStorage.setItem('pwaBannerDismissed', 'true');
+    });
+
+    closeIosModalBtn.addEventListener('click', () => {
+      iosModal.classList.remove('active');
+    });
+
+    // App Core Controls
     const video = document.getElementById('webcam');
     const viewport = document.getElementById('viewport');
     const canvas = document.getElementById('canvas');
@@ -461,15 +724,23 @@
     const captureBtn = document.getElementById('captureBtn');
     const flipBtn = document.getElementById('flipBtn');
     const refreshGpsBtn = document.getElementById('refreshGpsBtn');
+    const previewModal = document.getElementById('previewModal');
+    const photoPreview = document.getElementById('photoPreview');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const retakeBtn = document.getElementById('retakeBtn');
     const locationBanner = document.getElementById('locationBanner');
     const locationBannerText = document.getElementById('locationBannerText');
     const grantGpsBtn = document.getElementById('grantGpsBtn');
     const saveToast = document.getElementById('saveToast');
+    const logoImg = document.getElementById('logoImg');
+    const bannerLogo = document.getElementById('bannerLogo');
 
+    // Zoom Controls
     const zoomRange = document.getElementById('zoomRange');
     const zoomText = document.getElementById('zoomText');
     const zoomPresetBtns = document.querySelectorAll('.zoom-preset-btn');
 
+    // Edit Modals Controls
     const editCoordsBtn = document.getElementById('editCoordsBtn');
     const coordsModal = document.getElementById('coordsModal');
     const latInput = document.getElementById('latInput');
@@ -491,12 +762,8 @@
 
     let isManualGps = false;
     let isManualTime = false;
-    
     let zoomFactor = 1.0;
     let supportsHardwareZoom = false;
-
-    // Direct Gallery Folder Handle
-    let galleryFolderHandle = null;
 
     let currentGps = { 
       lat: 'N/A', 
@@ -505,6 +772,10 @@
       heading: 'N/A', 
       address: 'Fetching location...', 
       time: '' 
+    };
+
+    logoImg.onerror = () => {
+      logoImg.style.display = 'none';
     };
 
     function getCardinalDirection(angle) {
@@ -712,7 +983,10 @@
 
     function initCompass() {
       const handleOrientation = (event) => {
-        let heading = event.webkitCompassHeading !== undefined ? event.webkitCompassHeading : (event.alpha !== null ? 360 - event.alpha : null);
+        let heading = event.webkitCompassHeading !== undefined 
+          ? event.webkitCompassHeading 
+          : (event.alpha !== null ? 360 - event.alpha : null);
+
         if (heading !== null) {
           const degrees = Math.round(heading);
           currentGps.heading = `${degrees}° ${getCardinalDirection(degrees)}`;
@@ -734,6 +1008,7 @@
       headingAltDisplay.textContent = `Heading: ${currentGps.heading} | Alt: ${currentGps.alt}`;
     }
 
+    /* Modal Event Listeners */
     editCoordsBtn.addEventListener('click', () => {
       latInput.value = currentGps.lat !== 'N/A' ? currentGps.lat : '';
       lonInput.value = currentGps.lon !== 'N/A' ? currentGps.lon : '';
@@ -776,42 +1051,16 @@
       timeModal.classList.remove('active');
     });
 
-    // Auto-Save Directly into Phone Gallery / Chosen Storage
-    async function saveDirectToGallery(blob, fileName) {
-      if ('showDirectoryPicker' in window) {
-        try {
-          if (!galleryFolderHandle) {
-            alert('Select your Pictures/DCIM folder ONCE so photos auto-save directly to gallery!');
-            galleryFolderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-          }
-          const fileHandle = await galleryFolderHandle.getFileHandle(fileName, { create: true });
-          const writable = await fileHandle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-
-          showToast('📸 Saved directly to Gallery!');
-          return;
-        } catch (e) {
-          console.warn('Directory Picker cancelled/failed:', e);
-        }
-      }
-
-      // Background Download Fallback (No Preview Modal)
-      const url = URL.createObjectURL(blob);
+    function triggerAutoSave(dataUrl, fileName) {
       const link = document.createElement('a');
-      link.href = url;
+      link.href = dataUrl;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-      showToast('📸 Photo Saved!');
-    }
 
-    function showToast(msg) {
-      saveToast.textContent = msg;
       saveToast.classList.add('show');
-      setTimeout(() => saveToast.classList.remove('show'), 3000);
+      setTimeout(() => { saveToast.classList.remove('show'); }, 3000);
     }
 
     function capturePhoto() {
@@ -825,7 +1074,9 @@
       if (!supportsHardwareZoom && zoomFactor > 1.0) {
         const cropW = vWidth / zoomFactor;
         const cropH = vHeight / zoomFactor;
-        ctx.drawImage(video, (vWidth - cropW) / 2, (vHeight - cropH) / 2, cropW, cropH, 0, 0, canvas.width, canvas.height);
+        const cropX = (vWidth - cropW) / 2;
+        const cropY = (vHeight - cropH) / 2;
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
       } else {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       }
@@ -834,37 +1085,59 @@
       const margin = 20;
       const boxY = canvas.height - boxHeight - margin;
       
+      // Retain the exact dark overlay background theme
       ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
       ctx.roundRect(margin, boxY, canvas.width - (margin * 2), boxHeight, 16);
       ctx.fill();
 
+      // Render Logo onto Canvas without white box wrapper
+      const logoSize = boxHeight * 0.70;
+      const logoX = margin + 15;
+      const logoY = boxY + (boxHeight - logoSize) / 2;
+
+      if (logoImg.complete && logoImg.naturalWidth > 0) {
+        try {
+          ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+        } catch (e) {
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.fillText('DeWise', logoX + 4, logoY + (logoSize / 2));
+        }
+      }
+
+      const textX = logoX + logoSize + 15;
+
       ctx.fillStyle = '#38bdf8';
       ctx.font = `bold ${Math.floor(canvas.width * 0.030)}px sans-serif`;
-      ctx.fillText('DeWise GPS Camera', margin + 20, boxY + (boxHeight * 0.20));
+      ctx.fillText('DeWise GPS Camera', textX, boxY + (boxHeight * 0.22));
 
       ctx.fillStyle = '#ffffff';
       ctx.font = `bold ${Math.floor(canvas.width * 0.032)}px sans-serif`;
-      ctx.fillText(`GPS: ${currentGps.lat}°, ${currentGps.lon}°  |  ALT: ${currentGps.alt}`, margin + 20, boxY + (boxHeight * 0.40));
+      ctx.fillText(`GPS: ${currentGps.lat}°, ${currentGps.lon}° | ALT: ${currentGps.alt}`, textX, boxY + (boxHeight * 0.40));
 
       ctx.fillStyle = '#f59e0b';
       ctx.font = `bold ${Math.floor(canvas.width * 0.028)}px sans-serif`;
-      ctx.fillText(`HEADING: ${currentGps.heading}`, margin + 20, boxY + (boxHeight * 0.58));
+      ctx.fillText(`HEADING: ${currentGps.heading}`, textX, boxY + (boxHeight * 0.58));
 
       ctx.fillStyle = '#cbd5e1';
       ctx.font = `${Math.floor(canvas.width * 0.024)}px sans-serif`;
       let printAddr = currentGps.address;
-      if (printAddr.length > 55) printAddr = printAddr.substring(0, 52) + '...';
-      ctx.fillText(printAddr, margin + 20, boxY + (boxHeight * 0.76));
+      if (printAddr.length > 50) printAddr = printAddr.substring(0, 47) + '...';
+      ctx.fillText(printAddr, textX, boxY + (boxHeight * 0.76));
 
       ctx.fillStyle = '#94a3b8';
       ctx.font = `${Math.floor(canvas.width * 0.020)}px sans-serif`;
-      ctx.fillText(`DATE/TIME: ${currentGps.time}`, margin + 20, boxY + (boxHeight * 0.90));
+      ctx.fillText(`DATE/TIME: ${currentGps.time}`, textX, boxY + (boxHeight * 0.90));
 
-      // Direct Silent Capture
-      canvas.toBlob((blob) => {
-        const filename = `DeWise-GPS-${Date.now()}.jpg`;
-        saveDirectToGallery(blob, filename);
-      }, 'image/jpeg', 0.95);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const filename = `DeWise-GPS-${Date.now()}.jpg`;
+
+      photoPreview.src = dataUrl;
+      downloadBtn.href = dataUrl;
+      downloadBtn.download = filename;
+      previewModal.classList.add('active');
+
+      triggerAutoSave(dataUrl, filename);
     }
 
     captureBtn.addEventListener('click', capturePhoto);
@@ -879,6 +1152,10 @@
     grantGpsBtn.addEventListener('click', () => {
       startGpsTracking();
       initCompass();
+    });
+
+    retakeBtn.addEventListener('click', () => {
+      previewModal.classList.remove('active');
     });
 
     initCamera();
