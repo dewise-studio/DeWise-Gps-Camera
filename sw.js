@@ -1,28 +1,31 @@
-const CACHE_NAME = 'dewise-gps-v1';
+const CACHE_NAME = 'dewise-gps-v8';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './dewise-Gps.png'
 ];
 
-// Install Event - Cache Static Assets
+// Install Event: Cache essential app shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
+      console.log('[ServiceWorker] Pre-caching offline app shell');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
-// Activate Event - Clear Old Caches
+// Activate Event: Delete old cache versions immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            console.log('[ServiceWorker] Removing outdated cache:', cache);
+            return caches.delete(cache);
           }
         })
       );
@@ -31,24 +34,31 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch Event - Serve from Cache when Offline
+// Fetch Event: Cache-first strategy for local assets, network fallback for external calls
 self.addEventListener('fetch', (event) => {
-  // If requesting reverse geocode API online, try network first
-  if (event.request.url.includes('nominatim.openstreetmap.org')) {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return new Response(JSON.stringify({ display_name: 'Offline - Address Lookup Unavailable' }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
+  if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
     return;
   }
 
-  // Serve static application shell from cache
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        return networkResponse;
+      });
+    }).catch(() => {
+      if (event.request.mode === 'navigate') {
+        return caches.match('./index.html');
+      }
     })
   );
 });
